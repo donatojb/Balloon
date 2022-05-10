@@ -3,8 +3,14 @@
 #include <time.h>
 #include <random>
 #include <math.h>
+#include <cmath>
+#include "matplotlibcpp.h"
+
+//g++ main.cc -std=c++11 -I/home/donato/.local/lib/python3.8/site-packages/numpy/core/include -I/home/donato/.local/lib/python3.8/site-packages/tensorflow/include/external/local_config_python/python_include/ -lpython3.8 -lpthread -lutil -ldl -Xlinker -export-dynamic
+
 
 using namespace std;
+namespace plt = matplotlibcpp;
 
 typedef vector<double> V;
 typedef vector<V> VV;
@@ -44,8 +50,12 @@ void force(double A, double B, V &x, V &y, V &fx, V&fy) {
 }
 
 void primera_iter(double dt, double m, VV &p, V &v, V &f) {
-    for (int i = 0; i < (int)p[0].size(); ++i) 
+    for (int i = 0; i < (int)p[0].size(); ++i) {
+
+        cout << p[1][i] << endl;
         p[0][i] = p[1][i] + v[i]*dt + 0.5*(f[i]/m)*dt*dt;
+        cout << p[0][i] << endl;
+    }
 }
 
 int main() {
@@ -54,7 +64,7 @@ int main() {
     
     
     //paramtres de les particules i la caixa
-    int N = 100;
+    int N = 2;
     double m = 10e-27;
     double sig = 10e-10;
     double eps = 10e-10;
@@ -89,6 +99,10 @@ int main() {
     //fer primera iteracio de les posicions sense verlet
     primera_iter(dt, m, x, vx, fx);
     primera_iter(dt, m, y, vy, fy);
+
+    plt::figure();    
+    plt::plot(x[0], y[0], "r--");  
+    cout << "here" << endl;
+    plt::save("./basic.png");
     
 }
-    
