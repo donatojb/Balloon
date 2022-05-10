@@ -32,16 +32,20 @@ void force(double A, double B, V &x, V &y, V &fx, V&fy) {
     fx = V(fx.size(), 0); 
     fy = V(fy.size(), 0); 
     
-    for (int i = 0; i < x.size(); ++i) 
-        for (int j = 0; j < x.size(); ++j) 
+    for (int i = 0; i < (int)x.size(); ++i) 
+        for (int j = 0; j < (int)x.size(); ++j) 
             if (j != i) {
-            
-                double r = sqrt(x[i]
-            
-            
+                //calculem força de i sobre j
+                double r2 = pow(x[j]-x[i],2) + pow(y[j]-y[i],2);
+                double f = A/pow(r2,7) - B/pow(r2,4);
+                fx[j] += f*(x[j]-x[i]);
+                fy[j] += f*(y[j]-y[i]);
             }
-        
+}
 
+void primera_iter(double dt, double m, VV &p, V &v, V &f) {
+    for (int i = 0; i < (int)p[0].size(); ++i) 
+        p[0][i] = p[1][i] + v[i]*dt + 0.5*(f[i]/m)*dt*dt;
 }
 
 int main() {
@@ -80,8 +84,11 @@ int main() {
     init_p(ly, y[1]);
     
     //inicialitzar forces
+    force(A, B, x[1], y[1], fx, fy);
     
-    
+    //fer primera iteracio de les posicions sense verlet
+    primera_iter(dt, m, x, vx, fx);
+    primera_iter(dt, m, y, vy, fy);
     
 }
     
