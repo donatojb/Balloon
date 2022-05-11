@@ -9,6 +9,7 @@
 
 //g++ main.cc -std=c++11 -I/usr/include/python3.8/ -lpython3.8 
 
+//g++ main.cc -std=c++11 -I/home/donato/.local/lib/python3.8/site-packages/numpy/core/include -I/home/donato/.local/lib/python3.8/site-packages/tensorflow/include/external/local_config_python/python_include/ -lpython3.8 -lpthread -lutil -ldl -Xlinker -export-dynamic
 
 using namespace std;
 namespace plt = matplotlibcpp;
