@@ -4,9 +4,10 @@
 #include <random>
 #include <math.h>
 #include <cmath>
+#include <chrono>
 #include "matplotlibcpp.h"
 
-//g++ main.cc -std=c++11 -I/home/donato/.local/lib/python3.8/site-packages/numpy/core/include -I/home/donato/.local/lib/python3.8/site-packages/tensorflow/include/external/local_config_python/python_include/ -lpython3.8 -lpthread -lutil -ldl -Xlinker -export-dynamic
+//g++ main.cc -std=c++11 -I/usr/include/python3.8/ -lpython3.8 -lpthread -lutil -ldl -Xlinker -export-dynamic
 
 
 using namespace std;
@@ -15,21 +16,26 @@ namespace plt = matplotlibcpp;
 typedef vector<double> V;
 typedef vector<V> VV;
 
-const double k = 1.3806e-23;
+const double kb = 1.3806e-23;
 
-void init_v(double T, double m, V &v) {
+void init_v(double T, double m, V &vx, V &vy) {
     
     default_random_engine generator;
-    normal_distribution<double> distribution(0.0, sqrt(k*T/m));
-    for (double &vi : v) vi = distribution(generator);
+    generator.seed(chrono::system_clock::now().time_since_epoch().count());
+    double sd = sqrt(kb*T/m);
+    normal_distribution<double> distribution(0.0, sd);
+    for (double &vxi : vx) vxi = distribution(generator);
+    for (double &vyi : vy) vyi = distribution(generator);
         
 }
 
-void init_p(double l, V &p) {
+void init_p(double l, V &x, V &y) {
     
     default_random_engine generator;
+    generator.seed(chrono::system_clock::now().time_since_epoch().count());
     uniform_real_distribution<double> distribution(0.0, l);
-    for (double &pi : p) pi = distribution(generator);
+    for (double &xi : x) xi = distribution(generator);
+    for (double &yi : y) yi = distribution(generator);
         
 }
 
@@ -50,12 +56,9 @@ void force(double A, double B, V &x, V &y, V &fx, V&fy) {
 }
 
 void primera_iter(double dt, double m, VV &p, V &v, V &f) {
-    for (int i = 0; i < (int)p[0].size(); ++i) {
-
-        cout << p[1][i] << endl;
+    for (int i = 0; i < (int)p[0].size(); ++i) 
         p[0][i] = p[1][i] + v[i]*dt + 0.5*(f[i]/m)*dt*dt;
-        cout << p[0][i] << endl;
-    }
+
 }
 
 int main() {
@@ -64,13 +67,13 @@ int main() {
     
     
     //paramtres de les particules i la caixa
-    int N = 2;
+    int N = 100;
     double m = 10e-27;
-    double sig = 10e-10;
-    double eps = 10e-10;
+    double sig = 2.576e-10;
+    double eps = 10.2*kb;
     double T = 300;
-    double lx = 1e-8;
-    double ly = 1e-8;
+    double lx = 1e-7;
+    double ly = 1e-7;
     
     //parametres de simulacio
     double dt = 10e-13;
@@ -86,12 +89,10 @@ int main() {
     V fy = V(N);
     
     //inicialitzar velocitats
-    init_v(T, m, vx);
-    init_v(T, m, vy);
+    init_v(T, m, vx, vy);
     
     //inicialitzar posicions
-    init_p(lx, x[1]);
-    init_p(ly, y[1]);
+    init_p(lx, x[1], y[1]);
     
     //inicialitzar forces
     force(A, B, x[1], y[1], fx, fy);
@@ -100,9 +101,14 @@ int main() {
     primera_iter(dt, m, x, vx, fx);
     primera_iter(dt, m, y, vy, fy);
 
-    plt::figure();    
-    plt::plot(x[0], y[0], "r--");  
-    cout << "here" << endl;
-    plt::save("./basic.png");
+    plt::figure(1); 
+       
+    plt::Plot plot("primera");
     
+    plt::plot(x[0], y[0], "or"); 
+   // plt::xlim(0.0,lx);
+    //plt::ylim(0.0,ly);
+    plt::show();
+    
+
 }
