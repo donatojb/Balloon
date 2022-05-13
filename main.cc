@@ -40,7 +40,7 @@ void init_p(double l, V &x, V &y) {
         
 }
 
-void force(double m, double A, double B, V &x, V &y, V &fx, V&fy) {
+void force(double m, double A, double B, V &x, V &y, V &fx, V&fy, double rmax) {
 
     fx = V(fx.size(), 0); 
     fy = V(fy.size(), 0); 
@@ -50,9 +50,11 @@ void force(double m, double A, double B, V &x, V &y, V &fx, V&fy) {
             if (j != i) {
                 //calculem força de i sobre j
                 double r2 = pow(x[j]-x[i],2) + pow(y[j]-y[i],2);
-                double f = A/pow(r2,7) - B/pow(r2,4);
-                fx[j] += f*(x[j]-x[i]);
-                fy[j] += f*(y[j]-y[i]);
+                if(r2<rmax*rmax){
+                    double f = A/pow(r2,7) - B/pow(r2,4);
+                    fx[j] += f*(x[j]-x[i]);
+                    fy[j] += f*(y[j]-y[i]);
+                }
             }
 }
 
@@ -104,21 +106,22 @@ int main() {
     
     
     //paramtres de les particules i la caixa
-    int Niter = 50000;
-    int N = 100;
-    //double m = 10e-27;
-    double m =   6.6335209e-26;
+    int Niter = 500000;
+    int N = 20;
+    //double m = 10e-27; //Heli?
+    double m =   6.6335209e-26; //Argó
      
     //double sig = 2.576e-10;
-    double sig = 3.405e-10;
+    double sig = 3.418e-10; //Argó
     //double eps = 10.2*kb;
-    double eps = 119.8*kb;
-    double T = 300;
+    double eps = 119*kb; //Argó
+    double T = 10000;
     double lx = 1e-8;
     double ly = 1e-8;
+    double rmax = 10*1e-10;
     
     //parametres de simulacio
-    double dt = 1e-14;
+    double dt = 1e-16;
     double A = 4*12*eps*pow(sig,12);
     double B = 4*6*eps*pow(sig,6);
     
@@ -137,7 +140,7 @@ int main() {
     init_p(lx, x[1], y[1]);
     
     //inicialitzar forces
-    force(m, A, B, x[1], y[1], fx, fy);
+    force(m, A, B, x[1], y[1], fx, fy, rmax);
     
     //fer primera iteracio de les posicions sense verlet
     primera_iter(dt, m, x, vx, fx);
@@ -147,19 +150,19 @@ int main() {
     plt::title("Simulació");
     plt::Plot plot("Heli", "or");
     plt::legend();
-    plt::xlim(0.0-lx, 2*lx);
-    plt::ylim(0.0-ly, 2*ly);
+    plt::xlim(0.0-0.1*lx, lx*(1+0.1));
+    plt::ylim(0.0-0.1*ly, ly*(1+0.1));
     
     plot.update(x[1], y[1]);
     plt::pause(0.1);
     
     for (int k = 0; k < Niter; ++k) {
         
-        force(m, A, B, x[0], y[0], fx, fy);
+        force(m, A, B, x[0], y[0], fx, fy, rmax);
         next_iter(lx, m, dt, fx, x, vx);
         next_iter(ly, m, dt, fy, y, vy);
         
-        if (k%50 == 0) {
+        if (k%1000 == 0) {
             double E = kineticE(m, vx, vy);
             cout << E << endl;
             plot.update(x[0], y[0]);
