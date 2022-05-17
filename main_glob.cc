@@ -4,11 +4,13 @@
 #include <random>
 #include <math.h>
 #include <cmath>
+//#include <omp.h>
 #include <chrono>
 
 using namespace std;
 
 typedef vector<int> VE;
+typedef vector<VE> VVE;
 typedef vector<double> V;
 typedef vector<V> VV;
 typedef vector<VV> VVV;
@@ -16,22 +18,24 @@ typedef vector<VV> VVV;
 const double kb = 1.3806e-23;
 const double pi = M_PI;
 
-//valors amb els que crec que es conserva energia cinetica:
-//Argo, l = 5e-8, dt= 1e-15, T=300
+
+//int seed = chrono::system_clock::now().time_since_epoch().count();
+int seed = 79;
    
 //paramtres de les particules i la caixa
-int Niter = 30000;
-VE N = {200, 100};
+int Niter = 1000000;
+VE N = {1000, 100};
 V m = {1e-26, 6.6335209e-25};//6.6335209e-26     
-VV sig = {{2.576e-10, 2.997e-10}, {2.997e-10, 3.418e-10}};
+VV sig = {{2.576e-10, 2.997e-9}, {2.997e-9, 3.418e-10}};
 VV eps = {{10.2*kb, 34.8*kb}, {34.8*kb, 119*kb}}; 
-double T = 300;
+double T = 5;
 double lx = 3*1e-8;
 double ly = 3*1e-8;
 double rmax = 10*1e-10;
     
 //parametres de simulacio
 double dt = 1e-17;
+int Nq = 100;
 VV A = VV(N.size(), V(N.size()));
 VV B = VV(N.size(), V(N.size()));
 
@@ -49,7 +53,7 @@ double Rad = lx/3; //radi
 double p_ox = lx/2; // centre
 double p_oy = ly/2;
 double d_o; // distancia repos molla
-double k = 400; //fixar valor molla
+double k = 20000; //fixar valor molla
 
 
 void escriure(V &v, bool salt){
@@ -71,7 +75,7 @@ void visualitza(int a) {
 void init_v() {
     for (int i = 0; i < N.size(); ++i) {
         default_random_engine generator;
-        generator.seed(chrono::system_clock::now().time_since_epoch().count());
+        generator.seed(seed);
         double sd = sqrt(kb*T/m[i]);
         normal_distribution<double> distribution(0.0, sd);
         for (double &vxi : vx[i]) vxi = distribution(generator);
@@ -84,7 +88,7 @@ void init_v() {
 void init_p(int part) {
     
     default_random_engine generator;
-    generator.seed(chrono::system_clock::now().time_since_epoch().count());
+    generator.seed(seed);
     uniform_real_distribution<double> distribution(0.0, lx);
     for (double &xi : x[part][1]) xi = distribution(generator);
     for (double &yi : y[part][1]) yi = distribution(generator);
@@ -99,7 +103,7 @@ void init_pglob(int part) {
     }
     double dx = x[part][1][0]-x[part][1][1];
     double dy = y[part][1][0]-y[part][1][1];
-    d_o = sqrt(dx*dx + dy*dy);
+    d_o = 0.5*sqrt(dx*dx + dy*dy);
     
 }
 
@@ -107,34 +111,61 @@ void init_pglob(int part) {
 void init_pcercle(int part) {
 	double R = Rad*(0.9);
 	default_random_engine generator;
-    generator.seed(chrono::system_clock::now().time_since_epoch().count());
+    generator.seed(seed);
     uniform_real_distribution<double> distribution(0.0, 1.0);
     for (int i = 0; i < N[part]; ++i) {
-		double r = R*sqrt(distribution(generator));
-		double theta = distribution(generator)*2*pi;
+		double r;
+        if (i%2 == 0) r = R*sqrt(distribution(generator));
+		else r = Rad*1.1 + (lx/2-Rad)*sqrt(distribution(generator));
+        double theta = distribution(generator)*2*pi;
         x[part][1][i] = p_ox + r*cos(theta);
         y[part][1][i] = p_oy + r*sin(theta);
     }
 	
 }
 
+void init_pquadriculat(int part) {
+    default_random_engine generator;
+    generator.seed(seed);
+    VVE Ocupat(Nq, VE(Nq, 0));
+    Ocupat[0][0] = 1;
+    uniform_int_distribution<int> distribution(1, Nq-1);
+    for (int i = 0; i < N[part]; ++i) {
+        int xi = 0;
+        int yi = 0;
+        double r = Rad;
+        while (Ocupat[xi][yi] or (r < 1.1*Rad and r > 0.9*Rad)) {
+            xi = distribution(generator);
+            yi = distribution(generator);
+            double xd = lx*double(xi)/Nq;
+            double yd = ly*double(yi)/Nq;
+            r = sqrt((xd-p_ox)*(xd-p_ox) + (yd-p_oy)*(yd-p_oy));
+        }
+        Ocupat[xi][yi] = 1;
+        x[part][1][i] = lx*double(xi)/Nq;
+        y[part][1][i] = lx*double(yi)/Nq;
+    }
+}
 
 //a diu si utilitzar la x actual o l'anterior
 void force(int a) {
+    //#pragma omp parallel
+    //#pragma omp single
     for (int l = 0; l < (int)N.size(); ++l) {
         fx[l] = V(fx[l].size(), 0); 
         fy[l] = V(fy[l].size(), 0); 
-        for (int h = 0; h < (int)N.size(); ++h) {
-            for (int i = 0; i < (int)x[h][a].size(); ++i) 
-                for (int j = 0; j < (int)x[l][a].size(); ++j) {
+        for (int j = 0; j < N[l]; ++j) {
+            //#pragma omp task
+            for (int h = 0; h < (int)N.size(); ++h)
+                for (int i = 0; i < N[h]; ++i) {
                     if (l == h and l == 1) {
                         //força elastica entre particules contigues
                         if (abs(i-j) == 1 or abs(i-j) == N[1]-1) {
                             double dx = x[l][a][j]-x[h][a][i];
                             double dy = y[l][a][j]-y[h][a][i];
                             double r = sqrt(dx*dx+dy*dy);
-                            fx[l][j] += -0.5*k*(dx-d_o*(dx/r));
-                            fy[l][j] += -0.5*k*(dy-d_o*(dy/r));                                
+                            fx[l][j] += -k*(dx-d_o*(dx/r));
+                            fy[l][j] += -k*(dy-d_o*(dy/r));                                
                         }
                     }
                     else if (j != i or h != l) {
@@ -219,7 +250,8 @@ int main() {
     //inicialitzar posicions
     
     //init_p(0);
-    init_pcercle(0);
+    //init_pcercle(0);
+    init_pquadriculat(0);
     init_pglob(1);
     
     visualitza(1);
@@ -228,7 +260,6 @@ int main() {
     
     //fer primera iteracio de les posicions sense verlet
     primera_iter();
-	
 	
     for (int k = 0; k < Niter; ++k) {
         
