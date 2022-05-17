@@ -5,6 +5,7 @@
 #include <math.h>
 #include <cmath>
 #include <chrono>
+#include <fstream>
 
 using namespace std;
 
@@ -13,25 +14,27 @@ typedef vector<double> V;
 typedef vector<V> VV;
 typedef vector<VV> VVV;
 
+//constants
 const double kb = 1.3806e-23;
 const double pi = M_PI;
 
    
-//paramtres de les particules i la caixa
-int Niter = 5000000;
-VE N = {100, 100};
+//paramtres de les particules 
+VE N = {10, 10};
 V m = {6.6335209e-26, 6.6335209e-25};
 VV sig = {{2.576e-10, 2.997e-10}, {2.997e-10, 3.418e-10}};
 VV eps = {{10.2*kb, 34.8*kb}, {34.8*kb, 119*kb}}; 
+
+//parametres d'ambient
 double T = 300;
+double g = 0;
 double lx = 3*1e-8;
 double ly = 3*1e-8;
-double rmax = 10*1e-10;
     
 //parametres de simulacio
+int Niter = 300;
 double dt = 1e-15;
-VV A = VV(N.size(), V(N.size()));
-VV B = VV(N.size(), V(N.size()));
+double rmax = 10*1e-10;
 
     
 //vectors de informacio
@@ -41,28 +44,14 @@ VV vx = VV(N.size());
 VV vy = VV(N.size());
 VV fx = VV(N.size());
 VV fy = VV(N.size());
+VV A = VV(N.size(), V(N.size()));
+VV B = VV(N.size(), V(N.size()));
+
+//fitxer de sortida
+fstream fout;
 
 
 
-
-void escriure(V &v, bool salt){
-	for (double vi : v) cout << vi << " ";
-	if (salt) cout << endl;
-}
-
-//a diu si iteracio anterior o actual
-void visualitza(int a) {
-	for (int k = 0; k < (int)N.size(); ++k) 
-		escriure(x[k][a], false);
-	cout << endl;
-	for (int k = 0; k < (int)N.size(); ++k)	
-		escriure(y[k][a], false);
-	cout << endl;
-
-}
-
-
-//part numero indicador del tipus particula
 void init_p() {
     
     for (int k = 0; k < N.size(); ++k) {
@@ -116,19 +105,21 @@ void force(int a) {
         fx[k] = V(fx[k].size(), 0); 
         fy[k] = V(fy[k].size(), 0); 
         
-        for (int h = 0; h < (int)N.size(); ++h) {
-            
-            for (int i = 0; i < N[h]; ++i) {
-                for (int j = 0; j < N[k]; ++j) {
-                    
-                    fy[k][j] += -9.81e10*m[k];
-                    if (j != i or h != k) {
-                        //calculem força de i sobre j- lennard jones
-                        double r2 = pow(x[k][a][j]-x[h][a][i],2) + pow(y[k][a][j]-y[h][a][i],2);
+        for (int i = 0; i < N[k]; ++i) {
+            //força de la gravetat
+            fy[k][i] += g*m[k];
+
+            // iterem per la resta de particules (j != i (del mateix tipus) o l!=k (de tipus diferents))
+            for (int l = 0; l < (int)N.size(); ++l) { 
+                for (int j = 0; j < N[l]; ++j) {
+                    if (j != i or l != k) {
+
+                        //calculem força de j sobre i amb lennard jones
+                        double r2 = pow(x[k][a][j]-x[l][a][i],2) + pow(y[k][a][j]-y[l][a][i],2);
                         if(r2<rmax*rmax){
-                            double f = A[k][h]/pow(r2,7) - B[k][h]/pow(r2,4);
-                            fx[k][j] += f*(x[k][a][j]-x[h][a][i]);
-                            fy[k][j] += f*(y[k][a][j]-y[h][a][i]);
+                            double f = A[k][l]/pow(r2,7) - B[k][l]/pow(r2,4);
+                            fx[k][i] += f*(x[k][a][i]-x[l][a][j]);
+                            fy[k][i] += f*(y[k][a][i]-y[l][a][j]);
                         }
                     }
                 }
@@ -176,26 +167,85 @@ void next_iteri(double l, double m, V &f, VV &p, V &v) {
 void next_iter() {
 
     force(0);
-    for (int i = 0; i < (int)N.size(); ++i) {
-        next_iteri(lx, m[i], fx[i], x[i], vx[i]);
-        next_iteri(ly, m[i], fy[i], y[i], vy[i]);
+    for (int k = 0; k < (int)N.size(); ++k) {
+        next_iteri(lx, m[k], fx[k], x[k], vx[k]);
+        next_iteri(ly, m[k], fy[k], y[k], vy[k]);
     }
 }
 
 
-
-double kineticE () {
-    double E = 0;
-    for (int j = 0; j < N.size(); ++j) {
-        for (int i = 0; i < (int)vx[j].size(); ++i) {
-            
-            E += 0.5 * m[j] * (vx[j][i]*vx[j][i] + vy[j][i]*vy[j][i]);
-        }
+//k es el tipus de particula
+double kineticE (int k) {
+    double KE = 0;
+    for (int i = 0; i < N[k]; ++i) {
+            KE += 0.5 * m[k] * (vx[k][i]*vx[k][i] + vy[k][i]*vy[k][i]);
      }
-     return E;
+    return KE;
+}
+
+double potentialE () {
+
+    double PE = 0;
+
+    for (int k = 0; k < (int)N.size(); ++k) {
+
+        for (int i = 0; i < N[k]; ++i) {
+
+            // iterem per la resta de particules (j != i (del mateix tipus) o l!=k (de tipus diferents))
+            for (int l = 0; l < (int)N.size(); ++l) { 
+                for (int j = 0; j < N[l]; ++j) {
+                    if (j != i or l != k) {
+
+                        //calculem el potencial de j sobre i amb lennard jones
+                        double r2 = pow(x[k][0][j]-x[l][0][i],2) + pow(y[k][0][j]-y[l][0][i],2);
+                        if(r2 < rmax*rmax) {
+                            PE += (A[k][l]/12)/pow(r2,6) - (B[k][l]/6)/pow(r2,3);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return PE/2;
 }
 
 
+
+
+void guardar(int it) {
+	fout << it << endl;
+    fout << potentialE() << endl;
+    for (int k = 0; k < (int)N.size(); ++k) {
+        fout << kineticE(k) << endl;
+
+        bool first = true;
+        for (int i = 0; i < N[k]; ++i) {
+            if (first) first = false;
+            else fout << " ";
+            fout << x[k][0][i];
+        }
+        fout << endl;
+
+        first = true;
+        for (int i = 0; i < N[k]; ++i) {
+            if (first) first = false;
+            else fout << " ";
+            fout << y[k][0][i];
+        }
+        fout << endl;
+    }
+}
+
+void init_fout() {
+
+    fout.open("in.fo", ios::out);
+    fout << dt << endl;
+    fout << lx << endl << ly << endl;
+    fout << (int)N.size() << endl;
+    for (int k = 0; k < (int)N.size(); ++k) fout << N[k] << endl;
+
+}
 
 int main() {
     
@@ -210,12 +260,13 @@ int main() {
     
     //fer primera iteracio de les posicions sense verlet
     primera_iter();
-    visualitza(1);
-    
-	
-    for (int k = 0; k < Niter; ++k) {
+
+    //inicialitzar el fitxer de sortida
+    init_fout();
+
+    for (int it = 0; it < Niter; ++it) {
         next_iter();
-        if (k%100 == 0)  visualitza(0);
+        if (it%100 == 0)  guardar(it);
     }
     
     
