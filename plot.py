@@ -1,7 +1,7 @@
 #%%
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+from IPython.display import display, clear_output
 
 f = open("in.fo", "r")
 
@@ -22,51 +22,48 @@ ntypes = int(f.readline().split(" ")[0])
 kE = np.zeros(ntypes)
 n = np.zeros(ntypes, int)
 for k in range(ntypes):
-	n[k] = int(f.readline().split(" ")[0])
-	
+    n[k] = int(f.readline().split(" ")[0])
+    
 
 
 
 
 #settings visuals
-col = ['ro', 'bo']
+col = ['ro', 'bo', 'ko']
 
-def animate(i):
-
-	ax.clear()
+while(1):
+    ax.clear()
     
-	
-	#llegir iteracio i parar si hem arribat al final
-	it = f.readline()
-	if (not it):
-		quit()
-	
-	#llegir energia potencial
-	pE = float(f.readline().split(" ")[0])
+    
+    #llegir iteracio i parar si hem arribat al final
+    it = f.readline()
+    if (not it):
+        quit()
+    
+    #llegir energia potencial
+    pE = float(f.readline().split(" ")[0])
 
 
 
-	#per cada tipus de partícules llegir energia cinetica i posicions
-	for k in range(ntypes):
-		kE[k] = float(f.readline().split(" ")[0])
+    #per cada tipus de partícules llegir energia cinetica i posicions
+    for k in range(ntypes):
+        kE[k] = float(f.readline().split(" ")[0])
 
-		x =[float(i) for i in f.readline().split(" ")]
-		y =[float(i) for i in f.readline().split(" ")]
-		ax.text(k*100e-10,340e-10, "KE-"+str(k)+"= "+"{:e}".format(kE[k]) )
-	
-	ax.text(ntypes*100e-10,340e-10, "PE= "+"{:e}".format(pE) )
+        x =[float(i) for i in f.readline().split(" ")]
+        y =[float(i) for i in f.readline().split(" ")]
+        ax.text(k*130e-10*lx/300e-10,340e-10*ly/300e-10, "KE-"+str(k)+"= "+"{:e}".format(kE[k]) )
+        ax.plot(x,y,col[k], markersize=4,)
+    
+    ax.text(ntypes*130e-10*lx/300e-10,340e-10*ly/300e-10, "PE= "+"{:e}".format(pE) )
 
-	ax.text(0.01e-10,320e-10, "temps= "+"{:e}".format(int(it)*dt)+" s")
-	ax.plot(x,y,col[k], markersize=4,)
-	ax.set_xlim([0,lx])
-	ax.set_ylim([0,ly])
+    ax.text(20e-10*lx/300e-10,320e-10*ly/300e-10, "temps= "+"{:e}".format(int(it)*dt)+" s   ("+str(int(it))+")" )
+    ax.set_xlim([-0.05*lx,1.05*lx])
+    ax.set_ylim([-0.05*ly,1.05*ly])
+    
+    display(fig)
+    plt.pause(0.01)
 
 
-
-ani = FuncAnimation(fig, animate, frames=20000, interval=5, repeat=False)
-
-plt.show()
-ani.save("a.gif")
 
 
 f.close()
