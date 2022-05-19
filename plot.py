@@ -43,7 +43,6 @@ while(1):
     pE = float(f.readline().split(" ")[0])
 
 
-
     #per cada tipus de partícules llegir energia cinetica i posicions
     for k in range(ntypes):
         kE[k] = float(f.readline().split(" ")[0])
@@ -60,7 +59,7 @@ while(1):
     ax.set_ylim([-0.05*ly,1.05*ly])
     
     display(fig)
-    plt.pause(0.1)
+    plt.pause(0.01)
 
 
 

@@ -23,54 +23,117 @@ const double pi = M_PI;
 
    
 //parametres d'ambient
-double T = 300;
-double g = 0;
-double lx = 1e-8;
-double ly = lx;
+double T;
+double g;
+double lx;
+double ly;
    
 //paramtres de les particules 
-VE N = {30, 30, 30};
-V m = {1e-26, 2e-26,  6.6335209e-25};
-VV sig = {{2.576e-10, 2.576e-10, 2.997e-9},{2.576e-10, 2.576e-10, 2.997e-9}, {2.997e-9, 2.997e-9, 3.418e-10}};
-VV eps = {{10.2*kb, 10.2*kb, 34.8*kb},{10.2*kb, 10.2*kb, 34.8*kb},  {34.8*kb, 34.8*kb, 119*kb}}; 
-VS loc = {"dins","fora","glob"};
+VE N;
+V m;
+VV sig;
+VV eps; 
+VS loc;
 
    
 //parameteres del globus
-int glob = 2; 
-double Rg = lx/3; //radi
-double p_ox = lx/2; //centre 
-double p_oy = ly/2;
+int glob; 
+double Rg; //radi
+double p_ox; //centre 
+double p_oy;
 double d_o; // distancia repos molla
-double Kg = 5000;//20000 //fixar valor molla
-double elong = 1;  //elongacio inicial
+double Kg ;//20000 //fixar valor molla
+double elong;  //elongacio inicial
 
     
 //parametres de simulacio
-int Niter = 30000;
-double dt = 1e-17;
-double rmax = 10*1e-10;
-int Nq = 500; //longitud de la quadricula
+int Niter;
+double dt;
+double rmax;
+int Nq; //longitud de la quadricula
 int seed = chrono::system_clock::now().time_since_epoch().count();
-//int seed = 89;
 
 
 
-    
 //vectors de informacio
-VVV x = VVV(N.size());
-VVV y = VVV(N.size());
-VV vx = VV(N.size());
-VV vy = VV(N.size());
-VV fx = VV(N.size());
-VV fy = VV(N.size());
-VV A = VV(N.size(), V(N.size()));
-VV B = VV(N.size(), V(N.size()));
+VVV x;
+VVV y;
+VV vx;
+VV vy;
+VV fx;
+VV fy;
+VV A; 
+VV B;
 
 //fitxer de sortida
 fstream fout;
 
 
+void read_param() {
+    
+    //parameteres d'ambient
+    cin >> T;
+    cout << T;
+    cin >> g;
+    cout << g;
+    cin >> lx >> ly;
+    
+    //parametres de particula
+    int Npart; cin >> Npart;
+    N = VE(Npart);
+    m = V(Npart);
+    sig = VV(Npart, V(Npart));
+    eps = VV(Npart, V(Npart));
+    loc = VS(Npart);
+    
+    for (int k = 0; k < Npart; ++k) {
+        cin >> N[k] >> m[k] >> loc[k];
+        for (int l = 0; l < Npart; ++l) {
+            cin >> sig[k][l] >> eps[k][l];
+            eps[k][l] *= kb;
+        }
+    }
+    
+    //parametres de globus
+    cin >> glob >> Rg >> p_ox >> p_oy >> Kg >> elong;
+    
+    //parametres de simulacio
+    cin >> Niter >> dt >> rmax >> Nq >> seed;
+    if (seed == 0) seed = chrono::system_clock::now().time_since_epoch().count();
+    
+
+}
+
+
+
+
+void init_param() {
+    
+    x = VVV(N.size());
+    y = VVV(N.size());
+    vx = VV(N.size());
+    vy = VV(N.size());
+    fx = VV(N.size());
+    fy = VV(N.size());
+    A = VV(N.size(), V(N.size()));
+    B = VV(N.size(), V(N.size()));
+
+    for (int k = 0; k < N.size(); ++k) {
+        x[k] = VV(2, V(N[k]));
+        y[k] = VV(2, V(N[k]));
+        vx[k] = V(N[k]);
+        vy[k] = V(N[k]);
+        fx[k] = V(N[k]);
+        fy[k] = V(N[k]);
+    }
+    
+    for (int k = 0; k < N.size(); ++k)
+        for (int j = 0; j < N.size(); ++j) {
+            A[k][j] = 4*12*eps[k][j]*pow(sig[k][j],12);
+            B[k][j] = 4*6*eps[k][j]*pow(sig[k][j],6);
+    }
+
+}
 
 
 void init_pglob(int part) {
@@ -78,6 +141,7 @@ void init_pglob(int part) {
         x[part][1][i] = p_ox + Rg*cos((2*pi*i)/N[part]);
         y[part][1][i] = p_oy + Rg*sin((2*pi*i)/N[part]);
     }
+    
     double dx = x[part][1][0]-x[part][1][1];
     double dy = y[part][1][0]-y[part][1][1];
     d_o = (1/elong)*sqrt(dx*dx + dy*dy);
@@ -91,7 +155,9 @@ bool no_colocar(double r, string on) {
 }
 
 void init_pk(int part, string on) {
+
     if (on == "glob") {
+        
         init_pglob(part);
         return;
     }
@@ -99,6 +165,7 @@ void init_pk(int part, string on) {
     default_random_engine generator;
     generator.seed(seed);
     VVE Ocupat(Nq, VE(Nq, 0));
+    cout << Nq << endl;
     Ocupat[0][0] = 1;
     uniform_int_distribution<int> distribution(1, Nq-1);
     for (int i = 0; i < N[part]; ++i) {
@@ -128,7 +195,6 @@ void init_p() {
 
 void init_v() {
     for (int k = 0; k < N.size(); ++k) {
-        if (k !=
         default_random_engine generator;
         generator.seed(chrono::system_clock::now().time_since_epoch().count());
         double sd = sqrt(kb*T/m[k]);
@@ -138,25 +204,6 @@ void init_v() {
     }
 }
 
-void init_param() {
-
-    for (int k = 0; k < N.size(); ++k) {
-        x[k] = VV(2, V(N[k]));
-        y[k] = VV(2, V(N[k]));
-        vx[k] = V(N[k]);
-        vy[k] = V(N[k]);
-        fx[k] = V(N[k]);
-        fy[k] = V(N[k]);
-    }
-    
-    for (int k = 0; k < N.size(); ++k)
-        for (int j = 0; j < N.size(); ++j) {
-            A[k][j] = 4*12*eps[k][j]*pow(sig[k][j],12);
-            B[k][j] = 4*6*eps[k][j]*pow(sig[k][j],6);
-    }
-    
-
-}
 
 
 //a diu si utilitzar la x actual o l'anterior
@@ -333,15 +380,16 @@ void init_fout() {
 
 int main() {
     
+    //llegir input
+    read_param();
+    
     //inicialitzar parametres
     init_param();
     
     //inicialitzar velocitats
     init_v();
-    
     //inicialitzar posicions
     init_p();
-    
     //fer primera iteracio de les posicions sense verlet
     primera_iter();
 
