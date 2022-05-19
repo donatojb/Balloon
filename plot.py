@@ -60,7 +60,7 @@ while(1):
     ax.set_ylim([-0.05*ly,1.05*ly])
     
     display(fig)
-    plt.pause(0.01)
+    plt.pause(0.1)
 
 
 

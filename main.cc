@@ -25,28 +25,17 @@ const double pi = M_PI;
 //parametres d'ambient
 double T = 300;
 double g = 0;
-<<<<<<< HEAD
 double lx = 1e-8;
 double ly = lx;
    
 //paramtres de les particules 
-VE N = {15, 15, 15};
+VE N = {30, 30, 30};
 V m = {1e-26, 2e-26,  6.6335209e-25};
 VV sig = {{2.576e-10, 2.576e-10, 2.997e-9},{2.576e-10, 2.576e-10, 2.997e-9}, {2.997e-9, 2.997e-9, 3.418e-10}};
 VV eps = {{10.2*kb, 10.2*kb, 34.8*kb},{10.2*kb, 10.2*kb, 34.8*kb},  {34.8*kb, 34.8*kb, 119*kb}}; 
 VS loc = {"dins","fora","glob"};
-=======
-double lx = 3*1e-8;
-double ly = lx;
-   
-//paramtres de les particules 
-VE N = {5, 5, 5};
-V m = {1e-26, 2e-26,  6.6335209e-25};
-VV sig = {{2.576e-10, 2.576e-10, 2.997e-9},{2.576e-10, 2.576e-10, 2.997e-9}, {2.997e-9, 2.997e-9, 3.418e-10}};
-VV eps = {{10.2*kb, 10.2*kb, 34.8*kb},{10.2*kb, 10.2*kb, 34.8*kb},  {34.8*kb, 34.8*kb, 119*kb}}; 
-VS loc = {"dins","fora","globus"};
->>>>>>> 011c7da03f31234c461b224050d052ed7cbccd91
 
+   
 //parameteres del globus
 int glob = 2; 
 double Rg = lx/3; //radi
@@ -54,31 +43,17 @@ double p_ox = lx/2; //centre
 double p_oy = ly/2;
 double d_o; // distancia repos molla
 double Kg = 5000;//20000 //fixar valor molla
-<<<<<<< HEAD
 double elong = 1;  //elongacio inicial
-=======
-double elong = 1/0.75;  //elongacio inicial
->>>>>>> 011c7da03f31234c461b224050d052ed7cbccd91
-
 
     
 //parametres de simulacio
-<<<<<<< HEAD
-
-int Niter = 3000;
+int Niter = 30000;
 double dt = 1e-17;
 double rmax = 10*1e-10;
 int Nq = 500; //longitud de la quadricula
 int seed = chrono::system_clock::now().time_since_epoch().count();
 //int seed = 89;
-=======
-int seed = chrono::system_clock::now().time_since_epoch().count();
-//int seed = 89;
-int Niter = 3000;
-double dt = 1e-12;
-double rmax = 10*1e-10;
-int Nq = 500; //longitud de la quadricula
->>>>>>> 011c7da03f31234c461b224050d052ed7cbccd91
+
 
 
     
@@ -153,6 +128,7 @@ void init_p() {
 
 void init_v() {
     for (int k = 0; k < N.size(); ++k) {
+        if (k !=
         default_random_engine generator;
         generator.seed(chrono::system_clock::now().time_since_epoch().count());
         double sd = sqrt(kb*T/m[k]);
@@ -188,13 +164,8 @@ void force(int a) {
     
     for (int k = 0; k < (int)N.size(); ++k) {
         
-<<<<<<< HEAD
         fx[k] = V(N[k], 0); 
         fy[k] = V(N[k], 0); 
-=======
-        fx[k] = V(fx[k].size(), 0); 
-        fy[k] = V(fy[k].size(), 0); 
->>>>>>> 011c7da03f31234c461b224050d052ed7cbccd91
         
         for (int i = 0; i < N[k]; ++i) {
             //força de la gravetat
@@ -205,7 +176,6 @@ void force(int a) {
                 for (int j = 0; j < N[l]; ++j) {
                     
                     //força entre particules del globo
-<<<<<<< HEAD
                     if (l == k and k == glob ) {
                         if (abs(i-j) == 1 or abs(i-j) == N[glob]-1) {
                             double dx = x[k][a][i]-x[l][a][j];
@@ -214,14 +184,6 @@ void force(int a) {
                             fx[k][i] += -Kg*(dx-d_o*(dx/r));
                             fy[k][i] += -Kg*(dy-d_o*(dy/r));     
                         }                      
-=======
-                    if (l == k and k == glob and (abs(i-j) == 1 or abs(i-j) == N[glob]-1)) {
-                        double dx = x[k][a][i]-x[l][a][j];
-                        double dy = y[k][a][i]-y[l][a][j];
-                        double r = sqrt(dx*dx+dy*dy);
-                        fx[k][i] += -Kg*(dx-d_o*(dx/r));
-                        fy[k][i] += -Kg*(dy-d_o*(dy/r));                              
->>>>>>> 011c7da03f31234c461b224050d052ed7cbccd91
                     }
                     // força entre les demes particules
                     else if (j != i or l != k) {
@@ -237,11 +199,6 @@ void force(int a) {
                     
                 }
             }
-<<<<<<< HEAD
-
-            
-=======
->>>>>>> 011c7da03f31234c461b224050d052ed7cbccd91
         }
     }
 }
@@ -312,7 +269,6 @@ double potentialE () {
             // iterem per la resta de particules (j != i (del mateix tipus) o l!=k (de tipus diferents))
             for (int l = 0; l < (int)N.size(); ++l) { 
                 for (int j = 0; j < N[l]; ++j) {
-<<<<<<< HEAD
                     
                     //potencial entre les particules del globo
                     if (l == k and k == glob ) {
@@ -325,20 +281,12 @@ double potentialE () {
                     }
                     // potencial entre les demes particules
                     else if (j != i or l != k) {
-=======
-                    if (j != i or l != k) {
-
->>>>>>> 011c7da03f31234c461b224050d052ed7cbccd91
                         //calculem el potencial de j sobre i amb lennard jones
                         double r2 = pow(x[k][0][j]-x[l][0][i],2) + pow(y[k][0][j]-y[l][0][i],2);
                         if(r2 < rmax*rmax) {
                             PE += (A[k][l]/12)/pow(r2,6) - (B[k][l]/6)/pow(r2,3);
                         }
                     }
-<<<<<<< HEAD
-                        
-=======
->>>>>>> 011c7da03f31234c461b224050d052ed7cbccd91
                 }
             }
         }
@@ -349,10 +297,6 @@ double potentialE () {
 
 
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 011c7da03f31234c461b224050d052ed7cbccd91
 void guardar(int it) {
 	fout << it << endl;
     fout << potentialE() << endl;
@@ -407,6 +351,7 @@ int main() {
     for (int it = 0; it < Niter; ++it) {
         next_iter();
         if (it%1 == 0)  guardar(it);
+        if (it%100 == 0) cout << it << endl;
     }
     
     
