@@ -7,6 +7,7 @@
 #include <chrono>
 #include <fstream>
 #include <string>
+#include <sstream> 
 
 using namespace std;
 
@@ -23,54 +24,179 @@ const double pi = M_PI;
 
    
 //parametres d'ambient
-double T = 300;
-double g = 0;
-double lx = 1e-8;
-double ly = lx;
+double T;
+double g;
+double lx;
+double ly;
    
 //paramtres de les particules 
-VE N = {30, 30, 30};
-V m = {1e-26, 2e-26,  6.6335209e-25};
-VV sig = {{2.576e-10, 2.576e-10, 2.997e-9},{2.576e-10, 2.576e-10, 2.997e-9}, {2.997e-9, 2.997e-9, 3.418e-10}};
-VV eps = {{10.2*kb, 10.2*kb, 34.8*kb},{10.2*kb, 10.2*kb, 34.8*kb},  {34.8*kb, 34.8*kb, 119*kb}}; 
-VS loc = {"dins","fora","glob"};
+int Npart;
+VE N;
+V m;
+VV sig;
+VV eps; 
+VV rmax;
+VS loc;
 
    
 //parameteres del globus
-int glob = 2; 
-double Rg = lx/3; //radi
-double p_ox = lx/2; //centre 
-double p_oy = ly/2;
+int glob; 
+double Rg; //radi
+double p_ox; //centre 
+double p_oy;
 double d_o; // distancia repos molla
-double Kg = 5000;//20000 //fixar valor molla
-double elong = 1;  //elongacio inicial
+double Kg ;//20000 //fixar valor molla
+double elong;  //elongacio inicial
 
     
 //parametres de simulacio
-int Niter = 30000;
-double dt = 1e-17;
-double rmax = 10*1e-10;
-int Nq = 500; //longitud de la quadricula
+int Niter;
+double dt;
+int Nq; //longitud de la quadricula
+int fs;
 int seed = chrono::system_clock::now().time_since_epoch().count();
-//int seed = 89;
 
 
 
-    
 //vectors de informacio
-VVV x = VVV(N.size());
-VVV y = VVV(N.size());
-VV vx = VV(N.size());
-VV vy = VV(N.size());
-VV fx = VV(N.size());
-VV fy = VV(N.size());
-VV A = VV(N.size(), V(N.size()));
-VV B = VV(N.size(), V(N.size()));
+VVV x;
+VVV y;
+VV vx;
+VV vy;
+VV fx;
+VV fy;
+VV A; 
+VV B;
 
 //fitxer de sortida
 fstream fout;
+ifstream fin;
+
+void read_double(double &var) {
+
+    string line;
+    getline(fin, line);
+    stringstream ss;
+    ss << line;
+    string aux;
+    ss >> aux >> var;
+}
+
+void read_int(int &var) {
+
+    string line;
+    getline(fin, line);
+    stringstream ss;
+    ss << line;
+    string aux;
+    ss >> aux >> var;
+}
+
+void read_part(int k) {
+
+    string line;
+    getline(fin, line);
+    stringstream ss;
+    ss << line;
+    string aux;
+    
+    ss >> aux >> N[k] >> m[k] >> loc[k];
+    
+    for (int l = 0; l < Npart; ++l) 
+        ss >> sig[k][l];
+
+    for (int l = 0; l < Npart; ++l) {
+        ss >> eps[k][l];
+        eps[k][l] *= kb;
+    }
+    
+    for (int l = 0; l < Npart; ++l) 
+        ss >> rmax[k][l];
+}
+
+void read_param(string infile) {
+    
+    fin.open(infile, std::ios_base::in);
+    if (!fin.is_open()) {
+        cerr << "No es pot obrir el fitxer - '"
+             << infile << "'" << endl;
+        exit(EXIT_FAILURE);
+    }
+    string line;
+    
+    //parameteres d'ambient
+    read_double(T);
+    read_double(g);
+    read_double(lx);
+    read_double(ly);
+    
+    getline(fin, line);
+    read_int(Npart);
+    getline(fin,line); getline(fin,line);
+    
+    
+    //parametres de particula
+    N = VE(Npart);
+    m = V(Npart);
+    sig = VV(Npart, V(Npart));
+    eps = VV(Npart, V(Npart));
+    rmax = VV(Npart, V(Npart));
+    loc = VS(Npart);
+    
+    for (int k = 0; k < Npart; ++k)
+        read_part(k);
+    getline(fin, line);
+    
+    //parametres de globus
+    read_int(glob);
+    read_double(Rg);
+    read_double(p_ox);
+    read_double(p_oy);
+    read_double(Kg);
+    read_double(elong);
+    getline(fin, line);
+    
+    //parametres de simulacio
+    read_int(Niter);
+    read_double(dt);
+    read_int(Nq);
+    read_int(fs);
+    read_int(seed);
+    if (seed == 0) seed = chrono::system_clock::now().time_since_epoch().count();
+    
+
+}
 
 
+
+
+void init_param() {
+    
+    x = VVV(Npart);
+    y = VVV(Npart);
+    vx = VV(Npart);
+    vy = VV(Npart);
+    fx = VV(Npart);
+    fy = VV(Npart);
+    A = VV(Npart, V(Npart));
+    B = VV(Npart, V(Npart));
+
+    for (int k = 0; k < Npart; ++k) {
+        x[k] = VV(2, V(N[k]));
+        y[k] = VV(2, V(N[k]));
+        vx[k] = V(N[k]);
+        vy[k] = V(N[k]);
+        fx[k] = V(N[k]);
+        fy[k] = V(N[k]);
+    }
+    
+    for (int k = 0; k < Npart; ++k)
+        for (int j = 0; j < Npart; ++j) {
+            A[k][j] = 4*12*eps[k][j]*pow(sig[k][j],12);
+            B[k][j] = 4*6*eps[k][j]*pow(sig[k][j],6);
+    }
+
+}
 
 
 void init_pglob(int part) {
@@ -78,11 +204,11 @@ void init_pglob(int part) {
         x[part][1][i] = p_ox + Rg*cos((2*pi*i)/N[part]);
         y[part][1][i] = p_oy + Rg*sin((2*pi*i)/N[part]);
     }
+    
     double dx = x[part][1][0]-x[part][1][1];
     double dy = y[part][1][0]-y[part][1][1];
     d_o = (1/elong)*sqrt(dx*dx + dy*dy);
 }
-
 
 bool no_colocar(double r, string on) {
     if (on == "dins") return r > 0.9*Rg;
@@ -91,7 +217,9 @@ bool no_colocar(double r, string on) {
 }
 
 void init_pk(int part, string on) {
+
     if (on == "glob") {
+        
         init_pglob(part);
         return;
     }
@@ -118,17 +246,16 @@ void init_pk(int part, string on) {
     }
 }
 
-
 void init_p() {
     
-    for (int k = 0; k < N.size(); ++k) 
+    for (int k = 0; k < Npart; ++k) 
         init_pk(k, loc[k]);
         
 }
 
+
 void init_v() {
-    for (int k = 0; k < N.size(); ++k) {
-        if (k !=
+    for (int k = 0; k < Npart; ++k) {
         default_random_engine generator;
         generator.seed(chrono::system_clock::now().time_since_epoch().count());
         double sd = sqrt(kb*T/m[k]);
@@ -138,23 +265,14 @@ void init_v() {
     }
 }
 
-void init_param() {
 
-    for (int k = 0; k < N.size(); ++k) {
-        x[k] = VV(2, V(N[k]));
-        y[k] = VV(2, V(N[k]));
-        vx[k] = V(N[k]);
-        vy[k] = V(N[k]);
-        fx[k] = V(N[k]);
-        fy[k] = V(N[k]);
-    }
-    
-    for (int k = 0; k < N.size(); ++k)
-        for (int j = 0; j < N.size(); ++j) {
-            A[k][j] = 4*12*eps[k][j]*pow(sig[k][j],12);
-            B[k][j] = 4*6*eps[k][j]*pow(sig[k][j],6);
-    }
-    
+void init_fout(string outfile) {
+
+    fout.open(outfile, ios::out);
+    fout << dt << endl;
+    fout << lx << endl << ly << endl;
+    fout << Npart << endl;
+    for (int k = 0; k < Npart; ++k) fout << N[k] << endl;
 
 }
 
@@ -162,7 +280,7 @@ void init_param() {
 //a diu si utilitzar la x actual o l'anterior
 void force(int a) {
     
-    for (int k = 0; k < (int)N.size(); ++k) {
+    for (int k = 0; k < Npart; ++k) {
         
         fx[k] = V(N[k], 0); 
         fy[k] = V(N[k], 0); 
@@ -172,7 +290,7 @@ void force(int a) {
             fy[k][i] += g*m[k];
 
             // iterem per la resta de particules (j != i (del mateix tipus) o l!=k (de tipus diferents))
-            for (int l = 0; l < (int)N.size(); ++l) { 
+            for (int l = 0; l < Npart; ++l) { 
                 for (int j = 0; j < N[l]; ++j) {
                     
                     //força entre particules del globo
@@ -190,7 +308,7 @@ void force(int a) {
 
                         //calculem força de j sobre i amb lennard jones
                         double r2 = pow(x[k][a][j]-x[l][a][i],2) + pow(y[k][a][j]-y[l][a][i],2);
-                        if(r2<rmax*rmax){
+                        if(r2<rmax[k][l]*rmax[k][l]){
                             double f = A[k][l]/pow(r2,7) - B[k][l]/pow(r2,4);
                             fx[k][i] += f*(x[k][a][i]-x[l][a][j]);
                             fy[k][i] += f*(y[k][a][i]-y[l][a][j]);
@@ -203,11 +321,12 @@ void force(int a) {
     }
 }
 
+
 void primera_iter() {
     
     force(1);
     
-    for (int k = 0; k < (int)N.size(); ++k)
+    for (int k = 0; k < Npart; ++k)
         for (int i = 0; i < N[k]; ++i) {
             x[k][0][i] = x[k][1][i] + vx[k][i]*dt + 0.5*(fx[k][i]/m[k])*dt*dt;
             y[k][0][i] = y[k][1][i] + vy[k][i]*dt + 0.5*(fy[k][i]/m[k])*dt*dt;
@@ -242,7 +361,7 @@ void next_iteri(double l, double m, V &f, VV &p, V &v) {
 void next_iter() {
 
     force(0);
-    for (int k = 0; k < (int)N.size(); ++k) {
+    for (int k = 0; k < Npart; ++k) {
         next_iteri(lx, m[k], fx[k], x[k], vx[k]);
         next_iteri(ly, m[k], fy[k], y[k], vy[k]);
     }
@@ -262,12 +381,12 @@ double potentialE () {
 
     double PE = 0;
 
-    for (int k = 0; k < (int)N.size(); ++k) {
+    for (int k = 0; k < Npart; ++k) {
 
         for (int i = 0; i < N[k]; ++i) {
 
             // iterem per la resta de particules (j != i (del mateix tipus) o l!=k (de tipus diferents))
-            for (int l = 0; l < (int)N.size(); ++l) { 
+            for (int l = 0; l < Npart; ++l) { 
                 for (int j = 0; j < N[l]; ++j) {
                     
                     //potencial entre les particules del globo
@@ -283,7 +402,7 @@ double potentialE () {
                     else if (j != i or l != k) {
                         //calculem el potencial de j sobre i amb lennard jones
                         double r2 = pow(x[k][0][j]-x[l][0][i],2) + pow(y[k][0][j]-y[l][0][i],2);
-                        if(r2 < rmax*rmax) {
+                        if(r2 < rmax[k][l]*rmax[k][l]) {
                             PE += (A[k][l]/12)/pow(r2,6) - (B[k][l]/6)/pow(r2,3);
                         }
                     }
@@ -300,7 +419,7 @@ double potentialE () {
 void guardar(int it) {
 	fout << it << endl;
     fout << potentialE() << endl;
-    for (int k = 0; k < (int)N.size(); ++k) {
+    for (int k = 0; k < Npart; ++k) {
         fout << kineticE(k) << endl;
 
         bool first = true;
@@ -321,24 +440,19 @@ void guardar(int it) {
     }
 }
 
-void init_fout() {
 
-    fout.open("in.fo", ios::out);
-    fout << dt << endl;
-    fout << lx << endl << ly << endl;
-    fout << (int)N.size() << endl;
-    for (int k = 0; k < (int)N.size(); ++k) fout << N[k] << endl;
 
-}
-
-int main() {
+int main(int argc, char *argv[])  {
+    
+    //llegir input
+    read_param(argv[1]);
+    
     
     //inicialitzar parametres
     init_param();
     
     //inicialitzar velocitats
     init_v();
-    
     //inicialitzar posicions
     init_p();
     
@@ -346,11 +460,11 @@ int main() {
     primera_iter();
 
     //inicialitzar el fitxer de sortida
-    init_fout();
+    init_fout(argv[2]);
 
     for (int it = 0; it < Niter; ++it) {
         next_iter();
-        if (it%1 == 0)  guardar(it);
+        if (it%fs == 0)  guardar(it);
         if (it%100 == 0) cout << it << endl;
     }
     
