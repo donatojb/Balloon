@@ -4,6 +4,8 @@ from IPython.display import display, clear_output
 
 f = open("in.fo", "r")
 
+it0 = 0
+
 dt = float(f.readline().split(" ")[0])
 
 #crear la figura amb els limits
@@ -11,8 +13,14 @@ fig, ax = plt.subplots()
 lx = float(f.readline().split(" ")[0])
 ly = float(f.readline().split(" ")[0])
 
+fig2, ax2 = plt.subplots();
+fig3, ax3 = plt.subplots();
+fig4, ax4 = plt.subplots();
+
 x= []
 y= []
+vx = []
+vy = []
 
 
 
@@ -49,17 +57,34 @@ while(1):
 
         x =[float(i) for i in f.readline().split(" ")]
         y =[float(i) for i in f.readline().split(" ")]
-        ax.text(k*130e-10*lx/300e-10,340e-10*ly/300e-10, "KE-"+str(k)+"= "+"{:e}".format(kE[k]) )
-        ax.plot(x,y,col[k], markersize=4,)
+        vx =[float(i) for i in f.readline().split(" ")]
+        vy =[float(i) for i in f.readline().split(" ")]
+        
+        if (int(it) > it0):
+            ax.text(k*130e-10*lx/300e-10,340e-10*ly/300e-10, "KE-"+str(k)+"= "+"{:e}".format(kE[k]) )
+            ax.plot(x,y,col[k], markersize=4,)
+        
+            if (k == 0):
+                ax2.clear()
+                histo = np.sqrt( np.square(np.asarray(vx)) + np.square(np.asarray(vy)) )
+                ax2.hist(histo, bins = 40)
+                ax3.clear()
+                ax3.hist(vx, bins=20)
+                ax4.clear()
+                ax4.hist(vy, bins=20)
     
-    ax.text(ntypes*130e-10*lx/300e-10,340e-10*ly/300e-10, "PE= "+"{:e}".format(pE) )
-
-    ax.text(20e-10*lx/300e-10,320e-10*ly/300e-10, "temps= "+"{:e}".format(int(it)*dt)+" s   ("+str(int(it))+")" )
-    ax.set_xlim([-0.05*lx,1.05*lx])
-    ax.set_ylim([-0.05*ly,1.05*ly])
+    if (int(it) > it0):
+        ax.text(130e-10*lx/300e-10, 360e-10*ly/300e-10, "PE= "+"{:e}".format(pE) )
+        
+        ax.text(20e-10*lx/300e-10,320e-10*ly/300e-10, "temps= "+"{:e}".format(int(it)*dt)+" s   ("+str(int(it))+")" )
+        ax.set_xlim([-0.05*lx,1.05*lx])
+        ax.set_ylim([-0.05*ly,1.05*ly])
     
-    display(fig)
-    plt.pause(0.01)
+    
+    
+        display(fig)
+        display(fig2)
+        plt.pause(0.05)
 
 
 

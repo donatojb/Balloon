@@ -45,8 +45,8 @@ double Rg; //radi
 double p_ox; //centre 
 double p_oy;
 double d_o; // distancia repos molla
-double Kg ;//20000 //fixar valor molla
-double elong;  //elongacio inicial
+double Kg ; //fixar valor molla
+double elong; //elongacio inicial
 
     
 //parametres de simulacio
@@ -54,8 +54,7 @@ int Niter;
 double dt;
 int Nq; //longitud de la quadricula
 int fs;
-int seed = chrono::system_clock::now().time_since_epoch().count();
-
+int seed;
 
 
 //vectors de informacio
@@ -112,6 +111,7 @@ void read_part(int k) {
     
     for (int l = 0; l < Npart; ++l) 
         ss >> rmax[k][l];
+        
 }
 
 void read_param(string infile) {
@@ -162,8 +162,7 @@ void read_param(string infile) {
     read_int(Nq);
     read_int(fs);
     read_int(seed);
-    if (seed == 0) seed = chrono::system_clock::now().time_since_epoch().count();
-    
+    if (seed == 0) seed = chrono::system_clock::now().time_since_epoch().count();    
 
 }
 
@@ -256,12 +255,14 @@ void init_p() {
 
 void init_v() {
     for (int k = 0; k < Npart; ++k) {
-        default_random_engine generator;
-        generator.seed(chrono::system_clock::now().time_since_epoch().count());
-        double sd = sqrt(kb*T/m[k]);
-        normal_distribution<double> distribution(0.0, sd);
-        for (double &vxi : vx[k]) vxi = distribution(generator);
-        for (double &vyi : vy[k]) vyi = distribution(generator);
+        if (k != glob) {
+            default_random_engine generator;
+            generator.seed(seed);
+            double sd = sqrt(kb*T/m[k]);
+            normal_distribution<double> distribution(0.0, sd);
+            for (double &vxi : vx[k]) vxi = distribution(generator);
+            for (double &vyi : vy[k]) vyi = distribution(generator);
+        }
     }
 }
 
@@ -299,16 +300,16 @@ void force(int a) {
                             double dx = x[k][a][i]-x[l][a][j];
                             double dy = y[k][a][i]-y[l][a][j];
                             double r = sqrt(dx*dx+dy*dy);
-                            fx[k][i] += -Kg*(dx-d_o*(dx/r));
-                            fy[k][i] += -Kg*(dy-d_o*(dy/r));     
+                            fx[k][i] += -Kg*((r-d_o)*(dx/r));
+                            fy[k][i] += -Kg*((r-d_o)*(dy/r));     
                         }                      
                     }
                     // força entre les demes particules
                     else if (j != i or l != k) {
 
                         //calculem força de j sobre i amb lennard jones
-                        double r2 = pow(x[k][a][j]-x[l][a][i],2) + pow(y[k][a][j]-y[l][a][i],2);
-                        if(r2<rmax[k][l]*rmax[k][l]){
+                        double r2 = pow(x[k][a][j] - x[l][a][i],2) + pow(y[k][a][j] - y[l][a][i],2);
+                        if(r2 < rmax[k][l]*rmax[k][l]){
                             double f = A[k][l]/pow(r2,7) - B[k][l]/pow(r2,4);
                             fx[k][i] += f*(x[k][a][i]-x[l][a][j]);
                             fy[k][i] += f*(y[k][a][i]-y[l][a][j]);
@@ -326,11 +327,13 @@ void primera_iter() {
     
     force(1);
     
-    for (int k = 0; k < Npart; ++k)
+    for (int k = 0; k < Npart; ++k) {
         for (int i = 0; i < N[k]; ++i) {
             x[k][0][i] = x[k][1][i] + vx[k][i]*dt + 0.5*(fx[k][i]/m[k])*dt*dt;
             y[k][0][i] = y[k][1][i] + vy[k][i]*dt + 0.5*(fy[k][i]/m[k])*dt*dt;
         }
+    }
+
 }
 
 void next_iteri(double l, double m, V &f, VV &p, V &v) {
@@ -340,8 +343,11 @@ void next_iteri(double l, double m, V &f, VV &p, V &v) {
         // formula de l'algorisme de verlett
         double aux = p[0][i];
         double aux2 = p[1][i];
-        p[0][i] = 2*aux - p[1][i] + f[i]/m *dt*dt;
+        
+        
+        p[0][i] = 2*aux - aux2 + f[i]/m *dt*dt;
         p[1][i] = aux;
+        
         
         // condicions de vora
         if (p[0][i] < 0) {
@@ -352,8 +358,10 @@ void next_iteri(double l, double m, V &f, VV &p, V &v) {
             p[1][i] = 2*l - p[1][i];
             p[0][i] = 2*l - p[0][i];
         }
+        
         // calcul de la velocitat
-        v[i] = (p[0][i] - aux2)/2*dt;
+        v[i] = (p[0][i] - aux2)/(2*dt);
+
     }
     
 }
@@ -437,7 +445,24 @@ void guardar(int it) {
             fout << y[k][0][i];
         }
         fout << endl;
+        
+        first = true;
+        for (int i = 0; i < N[k]; ++i) {
+            if (first) first = false;
+            else fout << " ";
+            fout << vx[k][i];
+        }
+        fout << endl;
+        
+        first = true;
+        for (int i = 0; i < N[k]; ++i) {
+            if (first) first = false;
+            else fout << " ";
+            fout << vy[k][i];
+        }
+        fout << endl;
     }
+    
 }
 
 
