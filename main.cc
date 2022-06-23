@@ -211,7 +211,7 @@ void init_pglob(int part) {
 
 bool no_colocar(double r, string on) {
     if (on == "dins") return r > 0.9*Rg;
-    else if (on == "fora") return r < 1.5*Rg;
+    else if (on == "fora") return r < 1.1*Rg;
     else return (r < 1.1*Rg and r > 0.9*Rg);
 }
 
@@ -308,7 +308,7 @@ void force(int a) {
                     else if (j != i or l != k) {
 
                         //calculem força de j sobre i amb lennard jones
-                        double r2 = pow(x[k][a][j] - x[l][a][i],2) + pow(y[k][a][j] - y[l][a][i],2);
+                        double r2 = pow(x[k][a][i] - x[l][a][j],2) + pow(y[k][a][i] - y[l][a][j],2);
                         if(r2 < rmax[k][l]*rmax[k][l]){
                             double f = A[k][l]/pow(r2,7) - B[k][l]/pow(r2,4);
                             fx[k][i] += f*(x[k][a][i]-x[l][a][j]);
@@ -409,7 +409,7 @@ double potentialE () {
                     // potencial entre les demes particules
                     else if (j != i or l != k) {
                         //calculem el potencial de j sobre i amb lennard jones
-                        double r2 = pow(x[k][0][j]-x[l][0][i],2) + pow(y[k][0][j]-y[l][0][i],2);
+                        double r2 = pow(x[k][0][i]-x[l][0][j],2) + pow(y[k][0][i]-y[l][0][j],2);
                         if(r2 < rmax[k][l]*rmax[k][l]) {
                             PE += (A[k][l]/12)/pow(r2,6) - (B[k][l]/6)/pow(r2,3);
                         }
@@ -490,7 +490,7 @@ int main(int argc, char *argv[])  {
     for (int it = 0; it < Niter; ++it) {
         next_iter();
         if (it%fs == 0)  guardar(it);
-        if (it%100 == 0) cout << it << endl;
+        if (it%fs == 0) cout << it << endl;
     }
     
     
